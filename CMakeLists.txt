@@ -56,6 +56,9 @@ option(SPDLOG_BUILD_ALL "Build all artifacts" OFF)
 # build shared option
 option(SPDLOG_BUILD_SHARED "Build shared library" OFF)
 
+# build header only option
+option(SPDLOG_BUILD_HEADER_ONLY "Build header only library" OFF)
+
 # precompiled headers option
 option(SPDLOG_ENABLE_PCH "Build static or shared library using precompiled header to speed up compilation time" OFF)
 
@@ -172,37 +175,39 @@ if(SPDLOG_BUILD_SHARED OR BUILD_SHARED_LIBS)
     if(NOT SPDLOG_USE_STD_FORMAT AND NOT SPDLOG_FMT_EXTERNAL AND NOT SPDLOG_FMT_EXTERNAL_HO)
         target_compile_definitions(spdlog PRIVATE FMT_LIB_EXPORT PUBLIC FMT_SHARED)
     endif()
-else()
+elseif(NOT SPDLOG_BUILD_ONLY_HEADERS)
     add_library(spdlog STATIC ${SPDLOG_SRCS} ${SPDLOG_ALL_HEADERS})
 endif()
 
-add_library(spdlog::spdlog ALIAS spdlog)
+if (NOT SPDLOG_BUILD_ONLY_HEADERS)
+    add_library(spdlog::spdlog ALIAS spdlog)
 
-set(SPDLOG_INCLUDES_LEVEL "")
-if(SPDLOG_SYSTEM_INCLUDES)
-    set(SPDLOG_INCLUDES_LEVEL "SYSTEM")
-endif()
+    set(SPDLOG_INCLUDES_LEVEL "")
+    if(SPDLOG_SYSTEM_INCLUDES)
+        set(SPDLOG_INCLUDES_LEVEL "SYSTEM")
+    endif()
 
-target_compile_definitions(spdlog PUBLIC SPDLOG_COMPILED_LIB)
-target_include_directories(spdlog ${SPDLOG_INCLUDES_LEVEL} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-                                                                  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
-target_link_libraries(spdlog PUBLIC Threads::Threads)
-spdlog_enable_warnings(spdlog)
+    target_compile_definitions(spdlog PUBLIC SPDLOG_COMPILED_LIB)
+    target_include_directories(spdlog ${SPDLOG_INCLUDES_LEVEL} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+                                                                    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+    target_link_libraries(spdlog PUBLIC Threads::Threads)
+    spdlog_enable_warnings(spdlog)
 
-set_target_properties(spdlog PROPERTIES VERSION ${SPDLOG_VERSION} SOVERSION
-                                                                  ${SPDLOG_VERSION_MAJOR}.${SPDLOG_VERSION_MINOR})
-set_target_properties(spdlog PROPERTIES DEBUG_POSTFIX d)
+    set_target_properties(spdlog PROPERTIES VERSION ${SPDLOG_VERSION} SOVERSION
+                                                                    ${SPDLOG_VERSION_MAJOR}.${SPDLOG_VERSION_MINOR})
+    set_target_properties(spdlog PROPERTIES DEBUG_POSTFIX d)
 
-if(COMMAND target_precompile_headers AND SPDLOG_ENABLE_PCH)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/pch.h.in ${PROJECT_BINARY_DIR}/spdlog_pch.h @ONLY)
-    target_precompile_headers(spdlog PRIVATE ${PROJECT_BINARY_DIR}/spdlog_pch.h)
-endif()
+    if(COMMAND target_precompile_headers AND SPDLOG_ENABLE_PCH)
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/pch.h.in ${PROJECT_BINARY_DIR}/spdlog_pch.h @ONLY)
+        target_precompile_headers(spdlog PRIVATE ${PROJECT_BINARY_DIR}/spdlog_pch.h)
+    endif()
 
-# sanitizer support
-if(SPDLOG_SANITIZE_ADDRESS)
-    spdlog_enable_addr_sanitizer(spdlog)
-elseif(SPDLOG_SANITIZE_THREAD)
-    spdlog_enable_thread_sanitizer(spdlog)
+    # sanitizer support
+    if(SPDLOG_SANITIZE_ADDRESS)
+        spdlog_enable_addr_sanitizer(spdlog)
+    elseif(SPDLOG_SANITIZE_THREAD)
+        spdlog_enable_thread_sanitizer(spdlog)
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------------------
